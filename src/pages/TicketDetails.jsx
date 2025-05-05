@@ -5,18 +5,22 @@ import { useDataverseService } from '../services/dataverseService';
 import Sidebar from '../components/Sidebar';
 import TicketAnnotations from '../components/TicketAnnotations';
 import TicketAttentions from '../components/TicketAttentions';
-import { User, Mail, Building, Calendar, Tag, AlertCircle, Phone, Image as ImageIcon, X, Download, FileText } from 'lucide-react';
+import { VerEncuestaSatisfaccion } from '../components/VerEncuestaSatisfaccion';
+import { User, Mail, Building, Calendar, Tag, AlertCircle, Phone, Image as ImageIcon, X, Download, FileText, AlertTriangle } from 'lucide-react';
 import '@fontsource/inter';
 
 function TicketDetails() {
   const { ticketId } = useParams();
-  const { isAuthenticated, login } = useAuth();
-  const { fetchTicketDetails } = useDataverseService();
+  const { isAuthenticated, login, getAccessToken } = useAuth();
+  const { fetchTicketDetails, updateTicketStatus, fetchAttentions, createAttention, closeTicket, uploadFileToDataverse } = useDataverseService();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [updateCounter, setUpdateCounter] = useState(0);
+  const [accessToken, setAccessToken] = useState('');
+  const [showPriorityDisclaimer, setShowPriorityDisclaimer] = useState(true);
 
   const loadTicketDetails = useCallback(async () => {
     try {
@@ -25,8 +29,21 @@ function TicketDetails() {
       }
 
       setLoading(true);
+      console.log('Cargando detalles del ticket:', ticketId);
       const ticketData = await fetchTicketDetails(ticketId);
+      console.log('Datos del ticket cargados:', ticketData);
       setTicket(ticketData);
+      
+      // Si el ticket no está en revisión (estado !== "En revisión") y no está en proceso (estado !== "En proceso"),
+      // cambiamos su estado a "En revisión"
+      if (ticketData.amv_estado !== "En revisión" && ticketData.amv_estado !== "En proceso" && ticketData.amv_estado !== "Resuelta") {
+        console.log('Actualizando estado del ticket a "En revisión"');
+        await updateTicketStatus(ticketData.amv_ticketsid, "En revisión");
+        // Actualizamos el estado en el objeto del ticket actual para reflejarlo en la UI
+        ticketData.amv_estado = "En revisión";
+        setTicket({...ticketData});
+      }
+      
       setError(null);
     } catch (err) {
       console.error('Error loading ticket details:', err);
@@ -34,13 +51,34 @@ function TicketDetails() {
     } finally {
       setLoading(false);
     }
-  }, [ticketId, fetchTicketDetails]);
+  }, [ticketId, fetchTicketDetails, updateTicketStatus]);
+
+  const handleTicketUpdated = useCallback(() => {
+    console.log('Se solicitó actualizar el ticket desde un componente hijo');
+    setUpdateCounter(prevCounter => prevCounter + 1);
+  }, []);
+
+  useEffect(() => {
+    // Obtener el token de acceso al montar el componente
+    const fetchToken = async () => {
+      try {
+        const token = await getAccessToken();
+        setAccessToken(token);
+      } catch (err) {
+        console.error('Error al obtener token:', err);
+      }
+    };
+    
+    if (isAuthenticated) {
+      fetchToken();
+    }
+  }, [isAuthenticated, getAccessToken]);
 
   useEffect(() => {
     if (isAuthenticated) {
       loadTicketDetails();
     }
-  }, [isAuthenticated, loadTicketDetails]);
+  }, [isAuthenticated, loadTicketDetails, updateCounter]);
 
   const handleDownloadImage = useCallback((imageData, imageId) => {
     try {
@@ -111,6 +149,28 @@ function TicketDetails() {
             <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
               <strong className="font-bold">Error: </strong>
               <span className="block sm:inline">{error}</span>
+            </div>
+          )}
+          
+          {showPriorityDisclaimer && ticket && (
+            <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm" role="alert">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700 font-medium">
+                    Revisa la solicitud y selecciona la prioridad correcta.
+                  </p>
+                </div>
+                <button 
+                  className="ml-auto -mx-1.5 -my-1.5 bg-yellow-50 text-yellow-500 rounded-lg p-1.5 hover:bg-yellow-100 inline-flex items-center justify-center"
+                  onClick={() => setShowPriorityDisclaimer(false)}
+                >
+                  <span className="sr-only">Cerrar</span>
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -202,17 +262,117 @@ function TicketDetails() {
                   <div>
                     <p className="text-sm font-medium text-gray-500">Estado</p>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      ticket.amv_estado === "1" 
+                      ticket.amv_estado === "Resuelta"
                         ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
+                        : ticket.amv_estado === "En revisión"
+                          ? 'bg-blue-100 text-blue-800'
+                          : ticket.amv_estado === "En proceso"
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {ticket.amv_estado === "1" ? 'Cerrado' : 'Abierto'}
+                      {ticket.amv_estado === "Resuelta" 
+                        ? 'Resuelta' 
+                        : ticket.amv_estado === "En revisión" 
+                          ? 'En revisión' 
+                          : ticket.amv_estado === "En proceso"
+                            ? 'En proceso'
+                            : 'Abierto'}
                     </span>
+                  </div>
+                </div>
+                
+                {/* Campo de Prioridad */}
+                <div className="flex items-start space-x-4">
+                  <div className="bg-white border p-2 rounded-full shadow-sm">
+                    <Tag className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Prioridad</p>
+                    <div className="mt-1 flex items-center">
+                      {ticket.amv_prioridad ? (
+                        <>
+                          <span className={`h-3 w-3 mr-2 rounded-full ${
+                            ticket.amv_prioridad === "critica" 
+                              ? 'bg-red-500' 
+                              : ticket.amv_prioridad === "alta" 
+                                ? 'bg-yellow-400' 
+                                : ticket.amv_prioridad === "baja" 
+                                  ? 'bg-green-400' 
+                                  : 'bg-gray-300'
+                          }`}></span>
+                          
+                          <select 
+                            className="form-select border rounded-md px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003594]"
+                            value={ticket.amv_prioridad || ""}
+                            onChange={(e) => {
+                              const newPriority = e.target.value;
+                              // Crear una copia del ticket para actualizar la UI inmediatamente
+                              const updatedTicket = {...ticket, amv_prioridad: newPriority};
+                              setTicket(updatedTicket);
+                              
+                              // Actualizar en el servidor
+                              updateTicketStatus(ticket.amv_ticketsid, ticket.amv_estado, newPriority)
+                                .catch(err => {
+                                  console.error('Error al actualizar prioridad:', err);
+                                  // Revertir cambio en caso de error
+                                  setTicket(ticket);
+                                  alert('Error al cambiar la prioridad. Inténtelo de nuevo.');
+                                });
+                            }}
+                          >
+                            <option value="">Seleccionar prioridad</option>
+                            <option value="critica">Crítica (Inmediata)</option>
+                            <option value="alta">Alta (Prioritaria)</option>
+                            <option value="baja">Baja/media</option>
+                          </select>
+                        </>
+                      ) : (
+                        <select 
+                          className="form-select border rounded-md px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003594]"
+                          defaultValue=""
+                          onChange={(e) => {
+                            const newPriority = e.target.value;
+                            // Crear una copia del ticket para actualizar la UI inmediatamente
+                            const updatedTicket = {...ticket, amv_prioridad: newPriority};
+                            setTicket(updatedTicket);
+                            
+                            // Actualizar en el servidor
+                            updateTicketStatus(ticket.amv_ticketsid, ticket.amv_estado, newPriority)
+                              .catch(err => {
+                                console.error('Error al actualizar prioridad:', err);
+                                // Revertir cambio en caso de error
+                                setTicket(ticket);
+                                alert('Error al cambiar la prioridad. Inténtelo de nuevo.');
+                              });
+                          }}
+                        >
+                          <option value="">Seleccionar prioridad</option>
+                          <option value="critica">Crítica (Inmediata)</option>
+                          <option value="alta">Alta (Prioritaria)</option>
+                          <option value="baja">Baja/media</option>
+                        </select>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="border-t border-gray-200 my-6"></div>
+
+              {ticket.amv_solicitudanombrede && (
+                <div className="bg-blue-50 border border-blue-100 rounded-md p-4 mb-6">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <User className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-700">
+                        La solicitud fue creada por <span className="font-semibold">{ticket.createdby}</span>, a nombre de <span className="font-semibold">{ticket.amv_solicitudanombrede}</span>, por lo tanto, los datos de contacto son de este mismo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-gray-50 rounded-md p-4">
                 <p className="text-sm text-gray-500 uppercase tracking-wide">Asunto</p>
@@ -339,8 +499,22 @@ function TicketDetails() {
               </div>
               <TicketAttentions 
                 ticketId={ticket.amv_ticketsid} 
-                onTicketClosed={loadTicketDetails} 
-                showNewAttentionButton={ticket.amv_estado !== "1"}
+                onTicketClosed={handleTicketUpdated} 
+                showNewAttentionButton={ticket.amv_estado !== "Resuelta"}
+              />
+            </div>
+          )}
+          
+          {/* Sección de Encuesta de Satisfacción (solo para tickets resueltos) */}
+          {ticket && ticket.amv_estado === "Resuelta" && accessToken && (
+            <div className="bg-white shadow-lg rounded-lg p-8 mt-8 transition-all duration-300 ease-in-out hover:shadow-xl">
+              <div className="flex items-center space-x-2 mb-4">
+                <AlertCircle className="w-6 h-6 text-gray-400" />
+                <h3 className="text-2xl font-bold text-gray-900">Encuesta de Satisfacción</h3>
+              </div>
+              <VerEncuestaSatisfaccion 
+                ticketId={ticket.amv_ticketsid} 
+                accessToken={accessToken} 
               />
             </div>
           )}

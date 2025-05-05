@@ -8,7 +8,7 @@ import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import { FaTimes, FaPaperclip } from 'react-icons/fa';
 
 export default function TicketAttentions({ ticketId, onTicketClosed, showNewAttentionButton = true }) {
-  const { fetchAttentions, createAttention, closeTicket, uploadFileToDataverse } = useDataverseService();
+  const { fetchAttentions, createAttention, closeTicket, uploadFileToDataverse, updateTicketStatus } = useDataverseService();
   const { user } = useAuth();
   const [attentions, setAttentions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,20 +107,46 @@ export default function TicketAttentions({ ticketId, onTicketClosed, showNewAtte
         }
       }
 
-      // 3. Si se debe cerrar, actualizar el ticket
+      // 3. Si se debe cerrar, actualizar el ticket a "Resuelta"
       if (closeRequest) {
-        console.log('Attempting to close ticket with ID:', ticketId);
-        await closeTicket(ticketId);
-        if (onTicketClosed) onTicketClosed();
+        console.log('Cerrando ticket con ID:', ticketId);
+        console.log('Estableciendo estado del ticket a: "Resuelta"');
+        try {
+          const result = await closeTicket(ticketId);
+          console.log('Resultado de cierre de ticket:', result);
+          console.log('Ticket cerrado exitosamente. Estado establecido a "Resuelta"');
+        } catch (closeError) {
+          console.error('Error al cerrar el ticket:', closeError);
+          throw closeError;
+        }
+      } else {
+        // Si no se cierra el ticket, cambiar el estado a "En proceso"
+        console.log('Actualizando estado del ticket a "En proceso"');
+        try {
+          const result = await updateTicketStatus(ticketId, "En proceso");
+          console.log('Resultado de actualización de estado:', result);
+        } catch (statusError) {
+          console.error('Error al actualizar estado del ticket:', statusError);
+          throw statusError;
+        }
       }
 
-      // 4. Refrescar lista
+      // 4. Refrescar lista y notificar al componente padre para actualizar
       const data = await fetchAttentions(ticketId);
       setAttentions(data);
       setShowModal(false);
       setComment('');
       setCloseRequest(false);
       setSelectedFile(null);
+      
+      // Notificar al componente padre que debe actualizar los detalles del ticket
+      if (onTicketClosed) {
+        console.log('Notificando actualización al componente padre');
+        // Añadir pequeño retraso para asegurar que la actualización ha tenido tiempo de propagarse
+        setTimeout(() => {
+          onTicketClosed();
+        }, 500);
+      }
     } catch (err) {
       console.error('Error en el proceso de atención:', err);
       setError(err.message || 'Error al guardar la atención. Por favor, intente nuevamente.');

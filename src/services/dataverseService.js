@@ -13,7 +13,7 @@ export function useDataverseService() {
       }
 
       const response = await fetch(
-        `${DATAVERSE_API_ENDPOINT}/amv_ticketses?$select=amv_name,amv_asunto,amv_categoriadelasolicitud,amv_estado,createdon&$filter=amv_estado ne '1'&$expand=createdby($select=fullname)`,
+        `${DATAVERSE_API_ENDPOINT}/amv_ticketses?$select=amv_name,amv_asunto,amv_categoriadelasolicitud,amv_estado,amv_prioridad,createdon&$filter=amv_estado ne 'Resuelta'&$expand=createdby($select=fullname)`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -39,6 +39,7 @@ export function useDataverseService() {
         amv_asunto: ticket.amv_asunto,
         amv_categoriadelasolicitud: ticket.amv_categoriadelasolicitud,
         amv_estado: ticket.amv_estado,
+        amv_prioridad: ticket.amv_prioridad || 'No definida',
         createdon: ticket.createdon,
         createdby: ticket.createdby ? ticket.createdby.fullname : 'No disponible'
       }));
@@ -58,10 +59,11 @@ export function useDataverseService() {
         throw new Error('No se pudo obtener el token de acceso');
       }
 
-      console.log('[fetchClosedTickets] Obteniendo tickets cerrados');
+      console.log('[fetchClosedTickets] Obteniendo tickets resueltos');
 
+      // Consulta ÚNICAMENTE para tickets con estado "Resuelta"
       const response = await fetch(
-        `${DATAVERSE_API_ENDPOINT}/amv_ticketses?$select=amv_name,amv_categoriadelasolicitud,amv_fechadecierre,amv_asunto,createdon&$filter=amv_estado eq '1'&$expand=createdby($select=fullname)&$orderby=amv_fechadecierre desc`,
+        `${DATAVERSE_API_ENDPOINT}/amv_ticketses?$select=amv_name,amv_categoriadelasolicitud,amv_fechadecierre,amv_asunto,createdon,amv_estado&$filter=amv_estado eq 'Resuelta'&$expand=createdby($select=fullname)&$orderby=amv_fechadecierre desc`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -76,21 +78,32 @@ export function useDataverseService() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[fetchClosedTickets] Error en la respuesta:', errorData);
-        throw new Error(`Error al obtener tickets cerrados: ${response.status}`);
+        throw new Error(`Error al obtener tickets resueltos: ${response.status}`);
       }
 
       const data = await response.json();
       console.log('[fetchClosedTickets] Datos recibidos:', data.value);
-
+      console.log('[fetchClosedTickets] Total de tickets encontrados:', data.value.length);
+      
+      // Verificar que todos los tickets tienen el estado "Resuelta"
+      const ticketsWithCorrectStatus = data.value.filter(ticket => ticket.amv_estado === "Resuelta");
+      console.log('[fetchClosedTickets] Tickets con estado "Resuelta":', ticketsWithCorrectStatus.length);
+      
+      if (ticketsWithCorrectStatus.length !== data.value.length) {
+        console.warn('[fetchClosedTickets] Hay tickets que no tienen el estado "Resuelta"');
+      }
+      
       // Asegurarnos de que los tickets estén ordenados por fecha de cierre descendente
       const sortedTickets = data.value
         .map(ticket => ({
           amv_name: ticket.amv_name,
-        createdby: ticket.createdby ? ticket.createdby.fullname : 'No disponible',
-        amv_categoriadelasolicitud: ticket.amv_categoriadelasolicitud,
+          createdby: ticket.createdby ? ticket.createdby.fullname : 'No disponible',
+          amv_categoriadelasolicitud: ticket.amv_categoriadelasolicitud,
           amv_asunto: ticket.amv_asunto,
           createdon: ticket.createdon,
-        amv_fechadecierre: ticket.amv_fechadecierre
+          amv_fechadecierre: ticket.amv_fechadecierre,
+          // Asegurar que el estado siempre sea exactamente "Resuelta"
+          amv_estado: "Resuelta"
         }))
         .sort((a, b) => {
           // Si alguna fecha es null o undefined, ponerla al final
@@ -237,7 +250,7 @@ export function useDataverseService() {
 
       console.log('Fetching ticket with ID:', ticketId);
       const response = await fetch(
-        `${DATAVERSE_API_ENDPOINT}/amv_ticketses?$filter=amv_name eq '${encodeURIComponent(ticketId)}'&$select=amv_ticketsid,amv_name,amv_asunto,amv_categoriadelasolicitud,amv_estado,amv_descripcion,amv_correo,amv_sucursal,amv_telefono,createdon&$expand=createdby($select=fullname)`,
+        `${DATAVERSE_API_ENDPOINT}/amv_ticketses?$filter=amv_name eq '${encodeURIComponent(ticketId)}'&$select=amv_ticketsid,amv_name,amv_asunto,amv_categoriadelasolicitud,amv_estado,amv_prioridad,amv_descripcion,amv_correo,amv_sucursal,amv_telefono,amv_solicitudanombrede,createdon&$expand=createdby($select=fullname)`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -272,10 +285,12 @@ export function useDataverseService() {
         amv_asunto: ticket.amv_asunto,
         amv_categoriadelasolicitud: ticket.amv_categoriadelasolicitud,
         amv_estado: ticket.amv_estado,
+        amv_prioridad: ticket.amv_prioridad || '',
         amv_descripcion: ticket.amv_descripcion,
         amv_correo: ticket.amv_correo,
         amv_sucursal: ticket.amv_sucursal,
         amv_telefono: ticket.amv_telefono,
+        amv_solicitudanombrede: ticket.amv_solicitudanombrede || '',
         createdon: ticket.createdon,
         createdby: ticket.createdby ? ticket.createdby.fullname : 'No disponible',
         attachments
@@ -447,8 +462,27 @@ export function useDataverseService() {
       const currentDate = new Date().toISOString();
       console.log('[closeTicket] Fecha de cierre:', currentDate);
 
+      // Verificar que el ID del ticket tenga el formato correcto (GUID sin comillas ni llaves)
+      let formattedTicketId = ticketId;
+      // Si el ID tiene llaves, las eliminamos
+      if (formattedTicketId.startsWith('{') && formattedTicketId.endsWith('}')) {
+        formattedTicketId = formattedTicketId.slice(1, -1);
+      }
+      // Asegurar que no tiene comillas alrededor
+      formattedTicketId = formattedTicketId.replace(/"/g, '');
+
+      console.log('[closeTicket] ID de ticket formateado:', formattedTicketId);
+
+      // Preparar los datos para actualizar
+      const ticketData = {
+        'amv_estado': "Resuelta",
+        'amv_fechadecierre': currentDate
+      };
+      
+      console.log('[closeTicket] Datos a enviar:', JSON.stringify(ticketData, null, 2));
+
       const response = await fetch(
-        `${DATAVERSE_API_ENDPOINT}/amv_ticketses(${ticketId})`,
+        `${DATAVERSE_API_ENDPOINT}/amv_ticketses(${formattedTicketId})`,
         {
           method: 'PATCH',
           headers: {
@@ -459,10 +493,7 @@ export function useDataverseService() {
             'OData-Version': '4.0',
             'If-Match': '*'
           },
-          body: JSON.stringify({
-            'amv_estado': "1",
-            'amv_fechadecierre': currentDate
-          }),
+          body: JSON.stringify(ticketData),
         }
       );
 
@@ -476,10 +507,134 @@ export function useDataverseService() {
         throw new Error(`Error al cerrar el ticket: ${response.status} - ${response.statusText}`);
       }
 
-      console.log('[closeTicket] Ticket cerrado exitosamente');
+      console.log('[closeTicket] Ticket cerrado exitosamente con estado "Resuelta"');
+      
+      // Verificar que el estado se haya actualizado correctamente
+      try {
+        // Esperar un momento para asegurar que la actualización se ha propagado
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const verifyResponse = await fetch(
+          `${DATAVERSE_API_ENDPOINT}/amv_ticketses(${formattedTicketId})?$select=amv_estado`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'OData-MaxVersion': '4.0',
+              'OData-Version': '4.0'
+            },
+          }
+        );
+        
+        if (verifyResponse.ok) {
+          const verifyData = await verifyResponse.json();
+          console.log('[closeTicket] Verificación de estado:', verifyData.amv_estado);
+          
+          if (verifyData.amv_estado !== "Resuelta") {
+            console.warn('[closeTicket] ADVERTENCIA: El estado no se actualizó a "Resuelta", intentando de nuevo...');
+            
+            // Intentar nuevamente la actualización
+            const retryResponse = await fetch(
+              `${DATAVERSE_API_ENDPOINT}/amv_ticketses(${formattedTicketId})`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'OData-MaxVersion': '4.0',
+                  'OData-Version': '4.0',
+                  'If-Match': '*'
+                },
+                body: JSON.stringify({
+                  'amv_estado': "Resuelta"
+                }),
+              }
+            );
+            
+            if (retryResponse.ok) {
+              console.log('[closeTicket] Segundo intento exitoso');
+            } else {
+              console.warn('[closeTicket] El segundo intento también falló');
+            }
+          }
+        }
+      } catch (verifyError) {
+        console.warn('[closeTicket] Error al verificar el estado:', verifyError);
+        // No lanzamos el error para que no interrumpa el flujo principal
+      }
+      
       return true;
     } catch (error) {
       console.error('[closeTicket] Error al cerrar ticket:', error);
+      throw error;
+    }
+  }, [getAccessToken]);
+
+  // Actualizar el estado del ticket a "En revisión"
+  const updateTicketStatus = useCallback(async (ticketId, status, priority = null) => {
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        throw new Error('No se pudo obtener el token de acceso');
+      }
+
+      console.log('[updateTicketStatus] Actualizando ticket:', ticketId, 'estado:', status, 'prioridad:', priority);
+
+      // Verificar que el ID del ticket tenga el formato correcto (GUID sin comillas ni llaves)
+      let formattedTicketId = ticketId;
+      // Si el ID tiene llaves, las eliminamos
+      if (formattedTicketId.startsWith('{') && formattedTicketId.endsWith('}')) {
+        formattedTicketId = formattedTicketId.slice(1, -1);
+      }
+      // Asegurar que no tiene comillas alrededor
+      formattedTicketId = formattedTicketId.replace(/"/g, '');
+
+      console.log('[updateTicketStatus] ID de ticket formateado:', formattedTicketId);
+
+      // Prepare update data
+      const updateData = {
+        'amv_estado': status
+      };
+      
+      // Add priority to update data if provided
+      if (priority !== null) {
+        updateData['amv_prioridad'] = priority;
+      }
+
+      console.log('[updateTicketStatus] Datos a actualizar:', updateData);
+
+      const response = await fetch(
+        `${DATAVERSE_API_ENDPOINT}/amv_ticketses(${formattedTicketId})`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'OData-MaxVersion': '4.0',
+            'OData-Version': '4.0',
+            'If-Match': '*'
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('[updateTicketStatus] Error en la respuesta:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(`Error al actualizar el ticket: ${response.status} - ${response.statusText}`);
+      }
+
+      console.log('[updateTicketStatus] Ticket actualizado exitosamente');
+      return true;
+    } catch (error) {
+      console.error('[updateTicketStatus] Error al actualizar ticket:', error);
       throw error;
     }
   }, [getAccessToken]);
@@ -578,6 +733,7 @@ export function useDataverseService() {
     fetchAttentions,
     createAttention,
     closeTicket,
+    updateTicketStatus,
     uploadFileToDataverse,
   };
 } 
