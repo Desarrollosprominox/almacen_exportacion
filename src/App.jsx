@@ -1,15 +1,12 @@
 import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication, EventType } from '@azure/msal-browser';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { msalConfig } from './config/authConfig';
 import Login from './components/Login';
-import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import { useAuth } from './hooks/useAuth';
 import { useState, useEffect } from 'react';
 import './App.css';
-import Users from './pages/Users';
-import Reports from './pages/Reports';
-import TicketDetails from './pages/TicketDetails';
 
 // Componente de carga
 const LoadingSpinner = () => (
@@ -49,7 +46,7 @@ function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return (
@@ -57,14 +54,14 @@ function LoginPage() {
       <div className="w-full max-w-[420px] flex flex-col items-center animate-fadeIn">
         <div className="w-[150px] mb-9">
           <img
-            src="/logop.png"
-            alt="Prominox Logo"
+            src="/favicon.svg"
+            alt="Logo"
             className="w-full h-auto object-contain filter drop-shadow"
           />
         </div>
         
         <h1 className="text-2xl font-semibold text-gray-900 text-center mb-2">
-          Gestión de Tickets de sistemas
+          Bienvenido
         </h1>
         
         <p className="text-base text-gray-600 text-center mb-9">
@@ -79,20 +76,6 @@ function LoginPage() {
   );
 }
 
-// Componente que maneja la redirección inicial
-const InitialRedirect = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading) {
-      navigate(isAuthenticated ? '/dashboard' : '/login');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
-  return <LoadingSpinner />;
-};
-
 function App() {
   const [msalInstance, setMsalInstance] = useState(null);
 
@@ -101,7 +84,6 @@ function App() {
       try {
         const instance = new PublicClientApplication(msalConfig);
         
-        // Registrar eventos de MSAL
         instance.addEventCallback((event) => {
           if (event.eventType === EventType.LOGIN_SUCCESS) {
             if (event.payload.account) {
@@ -114,7 +96,6 @@ function App() {
         setMsalInstance(instance);
       } catch (error) {
         console.error("Error initializing MSAL:", error);
-        // Aún así establecemos una instancia para permitir el manejo de errores
         setMsalInstance(new PublicClientApplication(msalConfig));
       }
     };
@@ -130,36 +111,12 @@ function App() {
     <MsalProvider instance={msalInstance}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/" element={<Navigate to="/home" />} />
           <Route
-            path="/dashboard"
+            path="/home"
             element={
               <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/usuarios"
-            element={
-              <ProtectedRoute>
-                <Users />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/productos"
-            element={
-              <ProtectedRoute>
-                <Reports />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ticket/:ticketId"
-            element={
-              <ProtectedRoute>
-                <TicketDetails />
+                <Home />
               </ProtectedRoute>
             }
           />

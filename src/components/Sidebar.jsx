@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { 
-  Inbox, 
-  CheckCircle, 
-  BarChart2, 
+  Home,
   PanelLeftClose, 
   PanelLeftOpen 
 } from 'lucide-react';
@@ -26,6 +24,10 @@ function Sidebar({ onCollapse }) {
     }
   }, [isCollapsed, onCollapse]);
 
+  const menuItems = [
+    { path: '/home', icon: Home, label: 'Home' }
+  ];
+
   return (
     <>
       <div 
@@ -40,80 +42,42 @@ function Sidebar({ onCollapse }) {
         } fixed inset-y-0 left-0 bg-white border-r border-gray-200 shadow-lg flex flex-col transition-all duration-300 ease-in-out z-50`}
       >
         {/* Logo */}
-        <div className="flex items-center px-4 py-4 border-b border-white">
-          <div className="relative h-8 w-32 flex items-center">
+        <Link to="/home" className="flex items-center px-4 py-4 border-b border-white">
+          <div className={`relative flex items-center transition-all duration-300 ${
+            isCollapsed ? 'h-8 w-8' : 'h-12 w-32'
+          }`}>
             <img
-              src="/logoside.png"
-              alt="Prominox Logo"
-              className={`absolute top-0 left-0 transition-all duration-300 ${
-                isCollapsed ? 'opacity-0 scale-0' : 'opacity-100 scale-100'
-              }`}
-            />
-            <img
-              src="/logocolapsado.png"
-              alt="Prominox Logo"
-              className={`absolute top-0 left-0 w-8 transition-all duration-300 ${
-                isCollapsed ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
-              }`}
+              src="/favicon.svg"
+              alt="Logo"
+              className={`transition-all duration-300 ${
+                isCollapsed ? 'w-8 h-8' : 'w-32 h-12'
+              } object-contain`}
             />
           </div>
-        </div>
+        </Link>
 
         {/* Navigation Links */}
         <nav className="flex-1 flex flex-col space-y-4 px-3 py-6 overflow-y-auto">
-          <Link
-            to="/dashboard"
-            className={`flex items-center px-3 py-3 rounded-md transition-colors ${
-              isActive('/dashboard')
-                ? 'text-white bg-[#003594]'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Inbox className="w-5 h-5" />
-            <span 
-              className={`ml-3 text-sm font-medium transition-opacity duration-300 ${
-                isCollapsed ? 'opacity-0 hidden' : 'opacity-100'
+          {menuItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center px-3 py-3 rounded-md transition-colors ${
+                isActive(item.path)
+                  ? 'text-white bg-[#003594]'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Solicitudes pendientes
-            </span>
-          </Link>
-
-          <Link
-            to="/usuarios"
-            className={`flex items-center px-3 py-3 rounded-md transition-colors ${
-              isActive('/usuarios')
-                ? 'text-white bg-[#003594]'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <CheckCircle className="w-5 h-5" />
-            <span 
-              className={`ml-3 text-sm font-medium transition-opacity duration-300 ${
-                isCollapsed ? 'opacity-0 hidden' : 'opacity-100'
-              }`}
-            >
-              Solicitudes atendidas
-            </span>
-          </Link>
-
-          <Link
-            to="/productos"
-            className={`flex items-center px-3 py-3 rounded-md transition-colors ${
-              isActive('/productos')
-                ? 'text-white bg-[#003594]'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <BarChart2 className="w-5 h-5" />
-            <span 
-              className={`ml-3 text-sm font-medium transition-opacity duration-300 ${
-                isCollapsed ? 'opacity-0 hidden' : 'opacity-100'
-              }`}
-            >
-              Reportes
-            </span>
-          </Link>
+              <item.icon className="w-5 h-5" />
+              <span 
+                className={`ml-3 text-sm font-medium transition-opacity duration-300 ${
+                  isCollapsed ? 'opacity-0 hidden' : 'opacity-100'
+                }`}
+              >
+                {item.label}
+              </span>
+            </Link>
+          ))}
         </nav>
 
         {/* User Info */}
