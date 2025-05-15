@@ -746,7 +746,7 @@ export function useDataverseService() {
     try {
       const headers = await getAuthHeader();
       const response = await fetch(
-        `${DATAVERSE_URL}/amv_inventarioindirectoses?$select=amv_fecha,amv_producto,amv_categoria,amv_cantidad`,
+        `${DATAVERSE_URL}/amv_inventarioindirectoses?$select=amv_fecha,amv_producto,amv_categoria,amv_cantidad&$orderby=amv_fecha desc`,
         { headers }
       );
       

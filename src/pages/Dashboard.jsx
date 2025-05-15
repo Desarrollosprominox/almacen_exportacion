@@ -18,8 +18,8 @@ const Dashboard = () => {
           getProductosIndirectos()
         ]);
         
-        // Ordenar los datos por fecha descendente
-        const inventarioOrdenado = [...inventarioData].sort((a, b) => 
+        // Ordenar los datos por fecha descendente (más reciente primero)
+        const inventarioOrdenadoPorFecha = [...inventarioData].sort((a, b) => 
           new Date(b.amv_fecha) - new Date(a.amv_fecha)
         );
 
@@ -33,7 +33,7 @@ const Dashboard = () => {
         }, {});
 
         // Agrupar por producto y categoría para obtener el último registro de cada uno
-        const productosUnicos = inventarioOrdenado.reduce((acc, curr) => {
+        const productosUnicos = inventarioOrdenadoPorFecha.reduce((acc, curr) => {
           const key = `${curr.amv_producto}-${curr.amv_categoria}`;
           if (!acc[key]) {
             acc[key] = curr;
