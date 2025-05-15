@@ -4,7 +4,10 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   Home,
   PanelLeftClose, 
-  PanelLeftOpen 
+  PanelLeftOpen,
+  History,
+  BarChart2,
+  Settings
 } from 'lucide-react';
 
 function Sidebar({ onCollapse }) {
@@ -25,7 +28,10 @@ function Sidebar({ onCollapse }) {
   }, [isCollapsed, onCollapse]);
 
   const menuItems = [
-    { path: '/home', icon: Home, label: 'Home' }
+    { path: '/dashboard', icon: Home, label: 'Dashboard' },
+    { path: '/historico', icon: History, label: 'Histórico' },
+    { path: '/indicadores', icon: BarChart2, label: 'Indicadores' },
+    { path: '/admin', icon: Settings, label: 'Admin' }
   ];
 
   return (
@@ -42,7 +48,7 @@ function Sidebar({ onCollapse }) {
         } fixed inset-y-0 left-0 bg-white border-r border-gray-200 shadow-lg flex flex-col transition-all duration-300 ease-in-out z-50`}
       >
         {/* Logo */}
-        <Link to="/home" className="flex items-center px-4 py-4 border-b border-white">
+        <Link to="/dashboard" className="flex items-center px-4 py-4 border-b border-white">
           <div className={`relative flex items-center transition-all duration-300 ${
             isCollapsed ? 'h-8 w-8' : 'h-12 w-32'
           }`}>

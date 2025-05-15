@@ -2,11 +2,14 @@ import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication, EventType } from '@azure/msal-browser';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { msalConfig } from './config/authConfig';
-import Login from './components/Login';
-import Home from './pages/Home';
 import { useAuth } from './hooks/useAuth';
+import Sidebar from './components/Sidebar';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Historico from './pages/Historico';
+import Indicadores from './pages/Indicadores';
+import Admin from './pages/Admin';
 import { useState, useEffect } from 'react';
-import './App.css';
 
 // Componente de carga
 const LoadingSpinner = () => (
@@ -33,48 +36,21 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Página de login
-function LoginPage() {
-  const { isAuthenticated, isLoading, error } = useAuth();
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  if (error) {
-    console.error('Auth error:', error);
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to="/home" replace />;
-  }
+// Layout principal que incluye el sidebar y el contenido
+const MainLayout = ({ children }) => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-white fixed inset-0 w-screen h-screen">
-      <div className="w-full max-w-[420px] flex flex-col items-center animate-fadeIn">
-        <div className="w-[150px] mb-9">
-          <img
-            src="/favicon.svg"
-            alt="Logo"
-            className="w-full h-auto object-contain filter drop-shadow"
-          />
-        </div>
-        
-        <h1 className="text-2xl font-semibold text-gray-900 text-center mb-2">
-          Bienvenido
-        </h1>
-        
-        <p className="text-base text-gray-600 text-center mb-9">
-          Inicie sesión con su cuenta corporativa
-        </p>
-
-        <div className="w-full">
-          <Login />
-        </div>
+    <div className="flex h-screen bg-gray-100">
+      <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-64'} flex-shrink-0`}>
+        <Sidebar onCollapse={setIsSidebarCollapsed} />
       </div>
+      <main className="flex-1 overflow-y-auto p-6">
+        {children}
+      </main>
     </div>
   );
-}
+};
 
 function App() {
   const [msalInstance, setMsalInstance] = useState(null);
@@ -111,36 +87,52 @@ function App() {
     <MsalProvider instance={msalInstance}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/home" />} />
+          <Route path="/" element={<Navigate to="/dashboard" />} />
           <Route
-            path="/home"
+            path="/dashboard"
             element={
               <ProtectedRoute>
-                <Home />
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
-          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/historico"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Historico />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/indicadores"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Indicadores />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Admin />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
         </Routes>
       </BrowserRouter>
     </MsalProvider>
   );
 }
-
-// Añade la animación de fade-in
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
-document.head.appendChild(style);
 
 export default App;

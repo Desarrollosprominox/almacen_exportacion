@@ -1,9 +1,13 @@
 import { useAuth } from '../hooks/useAuth';
 import { useCallback } from 'react';
 import { DATAVERSE_API_ENDPOINT } from '../config/constants';
+import { useMsal } from '@azure/msal-react';
+
+const DATAVERSE_URL = 'https://orgb392fb43.crm.dynamics.com/api/data/v9.1';
 
 export function useDataverseService() {
   const { getAccessToken } = useAuth();
+  const { instance, accounts } = useMsal();
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -724,6 +728,89 @@ export function useDataverseService() {
     }
   }, [getAccessToken]);
 
+  const getAuthHeader = async () => {
+    const account = accounts[0];
+    const token = await instance.acquireTokenSilent({
+      scopes: ['https://orgb392fb43.crm.dynamics.com/.default'],
+      account: account
+    });
+    return {
+      'Authorization': `Bearer ${token.accessToken}`,
+      'Content-Type': 'application/json',
+      'OData-MaxVersion': '4.0',
+      'OData-Version': '4.0'
+    };
+  };
+
+  const getInventarioIndirecto = async () => {
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(
+        `${DATAVERSE_URL}/amv_inventarioindirectoses?$select=amv_fecha,amv_producto,amv_categoria,amv_cantidad`,
+        { headers }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Error al obtener datos de inventario');
+      }
+
+      const data = await response.json();
+      return data.value;
+    } catch (error) {
+      console.error('Error en getInventarioIndirecto:', error);
+      throw error;
+    }
+  };
+
+  const getProductosIndirectos = async () => {
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(
+        `${DATAVERSE_URL}/amv_productosindirectoses?$select=amv_productosindirectosid,amv_producto,amv_categoria,amv_minimo,amv_maximo`,
+        { headers }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Error al obtener datos de productos');
+      }
+
+      const data = await response.json();
+      return data.value;
+    } catch (error) {
+      console.error('Error en getProductosIndirectos:', error);
+      throw error;
+    }
+  };
+
+  const updateProductoIndirecto = async (productoId, data) => {
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(
+        `${DATAVERSE_URL}/amv_productosindirectoses(${productoId})`,
+        {
+          method: 'PATCH',
+          headers: {
+            ...headers,
+            'If-Match': '*'
+          },
+          body: JSON.stringify({
+            amv_minimo: data.amv_minimo,
+            amv_maximo: data.amv_maximo
+          })
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Error al actualizar el producto');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error en updateProductoIndirecto:', error);
+      throw error;
+    }
+  };
+
   return {
     fetchTickets,
     fetchClosedTickets,
@@ -735,5 +822,8 @@ export function useDataverseService() {
     closeTicket,
     updateTicketStatus,
     uploadFileToDataverse,
+    getInventarioIndirecto,
+    getProductosIndirectos,
+    updateProductoIndirecto
   };
 } 
