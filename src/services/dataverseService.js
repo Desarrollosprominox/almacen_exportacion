@@ -811,6 +811,38 @@ export function useDataverseService() {
     }
   };
 
+  const createProductoIndirecto = async (data) => {
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(
+        `${DATAVERSE_URL}/amv_productosindirectoses`,
+        {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            amv_producto: data.amv_producto,
+            amv_categoria: data.amv_categoria.charAt(0).toUpperCase() + data.amv_categoria.slice(1),
+            amv_minimo: data.amv_minimo,
+            amv_maximo: data.amv_maximo
+          })
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Error al crear el producto');
+      }
+
+      const newProduct = await response.json();
+      return newProduct;
+    } catch (error) {
+      console.error('Error en createProductoIndirecto:', error);
+      throw error;
+    }
+  };
+
   return {
     fetchTickets,
     fetchClosedTickets,
@@ -824,6 +856,7 @@ export function useDataverseService() {
     uploadFileToDataverse,
     getInventarioIndirecto,
     getProductosIndirectos,
-    updateProductoIndirecto
+    updateProductoIndirecto,
+    createProductoIndirecto
   };
 } 

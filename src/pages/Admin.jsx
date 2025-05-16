@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDataverseService } from '../services/dataverseService';
+import { Plus } from 'lucide-react';
 
 /**
  * Panel de administración para configurar valores mínimos y máximos
@@ -17,7 +18,14 @@ function Admin() {
   const [filtroActivo, setFiltroActivo] = useState('vinil');
   const [guardando, setGuardando] = useState(false);
   const [valoresEditados, setValoresEditados] = useState({});
-  const { getProductosIndirectos, updateProductoIndirecto } = useDataverseService();
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [nuevoProducto, setNuevoProducto] = useState({
+    amv_producto: '',
+    amv_categoria: 'Vinil',
+    amv_minimo: 0,
+    amv_maximo: 0
+  });
+  const { getProductosIndirectos, updateProductoIndirecto, createProductoIndirecto } = useDataverseService();
 
   useEffect(() => {
     const fetchProductos = async () => {
@@ -73,6 +81,30 @@ function Admin() {
     }));
   };
 
+  const handleCrearProducto = async () => {
+    try {
+      setGuardando(true);
+      const producto = await createProductoIndirecto(nuevoProducto);
+      
+      // Actualizar la lista de productos
+      setProductos(prev => [...prev, producto]);
+      
+      // Limpiar el formulario
+      setNuevoProducto({
+        amv_producto: '',
+        amv_categoria: 'Vinil',
+        amv_minimo: 0,
+        amv_maximo: 0
+      });
+      setMostrarFormulario(false);
+    } catch (error) {
+      console.error('Error al crear producto:', error);
+      setError('Error al crear el producto');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -100,7 +132,99 @@ function Admin() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Administración de Inventario</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Administración de Inventario</h1>
+        <button
+          onClick={() => setMostrarFormulario(!mostrarFormulario)}
+          className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 ${
+            mostrarFormulario
+              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          {mostrarFormulario ? (
+            'Cancelar'
+          ) : (
+            <>
+              <Plus size={20} />
+              Nuevo Producto
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Formulario de nuevo producto */}
+      {mostrarFormulario && (
+        <div className="mb-6 p-4 bg-white rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-4">Nuevo Producto</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del Producto
+              </label>
+              <input
+                type="text"
+                value={nuevoProducto.amv_producto}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, amv_producto: e.target.value }))}
+                className="border rounded-md p-2 w-full"
+                disabled={guardando}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categoría
+              </label>
+              <select
+                value={nuevoProducto.amv_categoria}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, amv_categoria: e.target.value }))}
+                className="border rounded-md p-2 w-full"
+                disabled={guardando}
+              >
+                <option value="Vinil">Vinil</option>
+                <option value="Tarima">Tarima</option>
+                <option value="Material de Empaque">Material de Empaque</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mínimo
+              </label>
+              <input
+                type="number"
+                value={nuevoProducto.amv_minimo}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, amv_minimo: parseInt(e.target.value) }))}
+                className="border rounded-md p-2 w-full"
+                disabled={guardando}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Máximo
+              </label>
+              <input
+                type="number"
+                value={nuevoProducto.amv_maximo}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, amv_maximo: parseInt(e.target.value) }))}
+                className="border rounded-md p-2 w-full"
+                disabled={guardando}
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleCrearProducto}
+              disabled={guardando || !nuevoProducto.amv_producto}
+              className={`px-4 py-2 rounded-md font-medium ${
+                guardando || !nuevoProducto.amv_producto
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {guardando ? 'Guardando...' : 'Guardar Producto'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Botones de filtro */}
       <div className="mb-6 flex gap-4">
@@ -123,6 +247,16 @@ function Admin() {
           }`}
         >
           Tarimas
+        </button>
+        <button
+          onClick={() => setFiltroActivo('material de empaque')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'material de empaque'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Material de Empaque
         </button>
       </div>
 

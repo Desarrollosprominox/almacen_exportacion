@@ -227,6 +227,7 @@ function Historico() {
             <option value="">Todas</option>
             <option value="vinil">Vinil</option>
             <option value="tarima">Tarima</option>
+            <option value="material de empaque">Material de Empaque</option>
           </select>
         </div>
       </div>

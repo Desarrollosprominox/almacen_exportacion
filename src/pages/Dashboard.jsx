@@ -4,7 +4,7 @@ import { useDataverseService } from '../services/dataverseService';
 const Dashboard = () => {
   const [inventario, setInventario] = useState([]);
   const [inventarioFiltrado, setInventarioFiltrado] = useState([]);
-  const [filtroActivo, setFiltroActivo] = useState('vinil');
+  const [filtroActivo, setFiltroActivo] = useState('Vinil');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getInventarioIndirecto, getProductosIndirectos } = useDataverseService();
@@ -60,7 +60,7 @@ const Dashboard = () => {
         }));
 
         setInventario(inventarioProcesado);
-        setInventarioFiltrado(inventarioProcesado.filter(item => item.categoria.toLowerCase() === filtroActivo));
+        setInventarioFiltrado(inventarioProcesado.filter(item => item.categoria === filtroActivo));
       } catch (err) {
         setError('Error al cargar los datos del inventario');
         console.error(err);
@@ -73,7 +73,7 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    setInventarioFiltrado(inventario.filter(item => item.categoria.toLowerCase() === filtroActivo));
+    setInventarioFiltrado(inventario.filter(item => item.categoria === filtroActivo));
   }, [filtroActivo, inventario]);
 
   const getEstado = (cantidad, categoria, minimo, maximo) => {
@@ -139,9 +139,9 @@ const Dashboard = () => {
       {/* Botones de filtro */}
       <div className="mb-6 flex gap-4">
         <button
-          onClick={() => setFiltroActivo('vinil')}
+          onClick={() => setFiltroActivo('Vinil')}
           className={`px-4 py-2 rounded-md font-medium ${
-            filtroActivo === 'vinil'
+            filtroActivo === 'Vinil'
               ? 'bg-blue-600 text-white'
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
@@ -149,14 +149,24 @@ const Dashboard = () => {
           Vinil
         </button>
         <button
-          onClick={() => setFiltroActivo('tarima')}
+          onClick={() => setFiltroActivo('Tarima')}
           className={`px-4 py-2 rounded-md font-medium ${
-            filtroActivo === 'tarima'
+            filtroActivo === 'Tarima'
               ? 'bg-blue-600 text-white'
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
           Tarimas
+        </button>
+        <button
+          onClick={() => setFiltroActivo('Material de Empaque')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'Material de Empaque'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Material de Empaque
         </button>
       </div>
 

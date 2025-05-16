@@ -317,6 +317,16 @@ function Indicadores() {
           >
             Tarima
           </button>
+          <button
+            onClick={() => setFiltroActivo('material de empaque')}
+            className={`px-4 py-2 rounded-md font-medium ${
+              filtroActivo === 'material de empaque'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Material de Empaque
+          </button>
         </div>
 
         {/* Selector de rango de días */}
