@@ -327,6 +327,16 @@ function Indicadores() {
           >
             Material de Empaque
           </button>
+          <button
+            onClick={() => setFiltroActivo('mextape')}
+            className={`px-4 py-2 rounded-md font-medium ${
+              filtroActivo === 'mextape'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Mextape
+          </button>
         </div>
 
         {/* Selector de rango de días */}

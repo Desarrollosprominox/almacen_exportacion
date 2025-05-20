@@ -187,6 +187,7 @@ function Admin() {
                 <option value="Vinil">Vinil</option>
                 <option value="Tarima">Tarima</option>
                 <option value="Material de Empaque">Material de Empaque</option>
+                <option value="Mextape">Mextape</option>
               </select>
             </div>
             <div>
@@ -261,6 +262,16 @@ function Admin() {
           }`}
         >
           Material de Empaque
+        </button>
+        <button
+          onClick={() => setFiltroActivo('mextape')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'mextape'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Mextape
         </button>
       </div>
 

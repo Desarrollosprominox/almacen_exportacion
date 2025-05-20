@@ -168,6 +168,16 @@ const Dashboard = () => {
         >
           Material de Empaque
         </button>
+        <button
+          onClick={() => setFiltroActivo('Mextape')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'Mextape'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Mextape
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
