@@ -57,7 +57,7 @@ const Dashboard = () => {
             day: '2-digit',
             timeZone: 'America/Mexico_City'
           })
-        }));
+        })).sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         setInventario(inventarioProcesado);
         setInventarioFiltrado(inventarioProcesado.filter(item => item.categoria === filtroActivo));
