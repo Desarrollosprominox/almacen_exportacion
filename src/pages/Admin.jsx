@@ -32,7 +32,11 @@ function Admin() {
       try {
         setLoading(true);
         const data = await getProductosIndirectos();
-        setProductos(data);
+        // Ordenar los productos alfabéticamente
+        const productosOrdenados = [...data].sort((a, b) => 
+          a.amv_producto.localeCompare(b.amv_producto)
+        );
+        setProductos(productosOrdenados);
       } catch (err) {
         setError('Error al cargar los productos');
         console.error(err);

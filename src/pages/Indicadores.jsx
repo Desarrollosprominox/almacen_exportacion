@@ -74,7 +74,7 @@ function Indicadores() {
           min: productosMap[item.amv_producto]?.minimo || 0,
           max: productosMap[item.amv_producto]?.maximo || 0,
           status: getEstado(item.amv_cantidad, productosMap[item.amv_producto]?.minimo, productosMap[item.amv_producto]?.maximo)
-        }));
+        })).sort((a, b) => a.type.localeCompare(b.type));
 
         setIndicators(indicadoresProcesados);
 
