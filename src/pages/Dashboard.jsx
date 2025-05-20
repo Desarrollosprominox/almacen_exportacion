@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDataverseService } from '../services/dataverseService';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const Dashboard = () => {
   const [inventario, setInventario] = useState([]);
@@ -7,6 +8,9 @@ const Dashboard = () => {
   const [filtroActivo, setFiltroActivo] = useState('Vinil');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mostrarCriticos, setMostrarCriticos] = useState(false);
+  const [mostrarBajos, setMostrarBajos] = useState(false);
+  const [mostrarNormales, setMostrarNormales] = useState(false);
   const { getInventarioIndirecto, getProductosIndirectos } = useDataverseService();
 
   useEffect(() => {
@@ -243,22 +247,118 @@ const Dashboard = () => {
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Productos en Estado Normal</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-800">Productos en Estado Normal</h3>
+            <button
+              onClick={() => setMostrarNormales(!mostrarNormales)}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              {mostrarNormales ? (
+                <ChevronUp className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          </div>
           <p className="text-3xl font-bold text-green-600">
             {inventarioFiltrado.filter(i => i.estado === 'normal').length}
           </p>
+          {mostrarNormales && (
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
+                {inventarioFiltrado
+                  .filter(i => i.estado === 'normal')
+                  .map(producto => (
+                    <div key={producto.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">{producto.nombre}</span>
+                        <span className="text-xs text-gray-500">{producto.categoria}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-semibold text-green-600">{producto.valorActual} {producto.unidad}</span>
+                        <span className="text-xs text-gray-500">Mín: {producto.minimo}</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Productos Bajos</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-800">Productos Bajos</h3>
+            <button
+              onClick={() => setMostrarBajos(!mostrarBajos)}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              {mostrarBajos ? (
+                <ChevronUp className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          </div>
           <p className="text-3xl font-bold text-yellow-600">
             {inventarioFiltrado.filter(i => i.estado === 'bajo').length}
           </p>
+          {mostrarBajos && (
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
+                {inventarioFiltrado
+                  .filter(i => i.estado === 'bajo')
+                  .map(producto => (
+                    <div key={producto.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">{producto.nombre}</span>
+                        <span className="text-xs text-gray-500">{producto.categoria}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-semibold text-yellow-600">{producto.valorActual} {producto.unidad}</span>
+                        <span className="text-xs text-gray-500">Mín: {producto.minimo}</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Productos Críticos</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-800">Productos Críticos</h3>
+            <button
+              onClick={() => setMostrarCriticos(!mostrarCriticos)}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              {mostrarCriticos ? (
+                <ChevronUp className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          </div>
           <p className="text-3xl font-bold text-red-600">
             {inventarioFiltrado.filter(i => i.estado === 'critico').length}
           </p>
+          {mostrarCriticos && (
+            <div className="mt-4 border-t border-gray-200 pt-4">
+              <div className="space-y-3 max-h-[200px] overflow-y-auto pr-2">
+                {inventarioFiltrado
+                  .filter(i => i.estado === 'critico')
+                  .map(producto => (
+                    <div key={producto.id} className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900">{producto.nombre}</span>
+                        <span className="text-xs text-gray-500">{producto.categoria}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-semibold text-red-600">{producto.valorActual} {producto.unidad}</span>
+                        <span className="text-xs text-gray-500">Mín: {producto.minimo}</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
