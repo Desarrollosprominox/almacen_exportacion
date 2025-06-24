@@ -188,6 +188,9 @@ function Admin() {
                 <option value="Tarima">Tarima</option>
                 <option value="Material de Empaque">Material de Empaque</option>
                 <option value="Mextape">Mextape</option>
+                <option value="Esquineros">Esquineros</option>
+                <option value="Cartón">Cartón</option>
+                <option value="Bandas">Bandas</option>
               </select>
             </div>
             <div>
@@ -272,6 +275,36 @@ function Admin() {
           }`}
         >
           Mextape
+        </button>
+        <button
+          onClick={() => setFiltroActivo('esquineros')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'esquineros'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Esquineros
+        </button>
+        <button
+          onClick={() => setFiltroActivo('cartón')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'cartón'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Cartón
+        </button>
+        <button
+          onClick={() => setFiltroActivo('bandas')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'bandas'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Bandas
         </button>
       </div>
 

@@ -182,6 +182,36 @@ const Dashboard = () => {
         >
           Mextape
         </button>
+        <button
+          onClick={() => setFiltroActivo('Esquineros')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'Esquineros'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Esquineros
+        </button>
+        <button
+          onClick={() => setFiltroActivo('Cartón')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'Cartón'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Cartón
+        </button>
+        <button
+          onClick={() => setFiltroActivo('Bandas')}
+          className={`px-4 py-2 rounded-md font-medium ${
+            filtroActivo === 'Bandas'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          Bandas
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">

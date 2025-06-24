@@ -337,6 +337,36 @@ function Indicadores() {
           >
             Mextape
           </button>
+          <button
+            onClick={() => setFiltroActivo('esquineros')}
+            className={`px-4 py-2 rounded-md font-medium ${
+              filtroActivo === 'esquineros'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Esquineros
+          </button>
+          <button
+            onClick={() => setFiltroActivo('cartón')}
+            className={`px-4 py-2 rounded-md font-medium ${
+              filtroActivo === 'cartón'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Cartón
+          </button>
+          <button
+            onClick={() => setFiltroActivo('bandas')}
+            className={`px-4 py-2 rounded-md font-medium ${
+              filtroActivo === 'bandas'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Bandas
+          </button>
         </div>
 
         {/* Selector de rango de días */}
