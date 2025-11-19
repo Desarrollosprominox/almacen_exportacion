@@ -6,12 +6,27 @@ const Dashboard = () => {
   const [inventario, setInventario] = useState([]);
   const [inventarioFiltrado, setInventarioFiltrado] = useState([]);
   const [filtroActivo, setFiltroActivo] = useState('Vinil');
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos'); // todos | normal | bajo | critico
+  const [filtroCantidad, setFiltroCantidad] = useState('todos'); // todos | igualCero | menorMinimo | entreMinMax | mayorMaximo
+  const [filtroFecha, setFiltroFecha] = useState('todos'); // todos | hoy | ultimos7 | rango
+  const [rangoFechaInicio, setRangoFechaInicio] = useState('');
+  const [rangoFechaFin, setRangoFechaFin] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mostrarCriticos, setMostrarCriticos] = useState(false);
   const [mostrarBajos, setMostrarBajos] = useState(false);
   const [mostrarNormales, setMostrarNormales] = useState(false);
   const { getInventarioIndirecto, getProductosIndirectos } = useDataverseService();
+
+  const handleLimpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroEstado('todos');
+    setFiltroCantidad('todos');
+    setFiltroFecha('todos');
+    setRangoFechaInicio('');
+    setRangoFechaFin('');
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,6 +70,7 @@ const Dashboard = () => {
           minimo: productosMap[item.amv_producto]?.minimo || 0,
           maximo: productosMap[item.amv_producto]?.maximo || 0,
           estado: getEstado(item.amv_cantidad, item.amv_categoria, productosMap[item.amv_producto]?.minimo, productosMap[item.amv_producto]?.maximo),
+          fecha: new Date(item.amv_fecha),
           ultimaActualizacion: new Date(item.amv_fecha).toLocaleDateString('es-MX', {
             year: 'numeric',
             month: '2-digit',
@@ -77,8 +93,84 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    setInventarioFiltrado(inventario.filter(item => item.categoria === filtroActivo));
-  }, [filtroActivo, inventario]);
+    const query = busqueda.trim().toLowerCase();
+
+    const toStartOfDay = (date) => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const toEndOfDay = (date) => {
+      const d = new Date(date);
+      d.setHours(23, 59, 59, 999);
+      return d;
+    };
+
+    let base = inventario;
+
+    // Búsqueda global vs filtro por categoría
+    if (query) {
+      base = base.filter(item =>
+        item.nombre.toLowerCase().includes(query) ||
+        item.categoria.toLowerCase().includes(query)
+      );
+    } else {
+      base = base.filter(item => item.categoria === filtroActivo);
+    }
+
+    // Filtro por estado
+    if (filtroEstado !== 'todos') {
+      base = base.filter(item => item.estado === filtroEstado);
+    }
+
+    // Filtro por cantidad
+    if (filtroCantidad !== 'todos') {
+      base = base.filter(item => {
+        const cantidad = Number(item.valorActual) || 0;
+        const minimo = Number(item.minimo) || 0;
+        const maximo = Number(item.maximo) || 0;
+        switch (filtroCantidad) {
+          case 'igualCero':
+            return cantidad === 0;
+          case 'menorMinimo':
+            return cantidad < minimo;
+          case 'entreMinMax':
+            return cantidad >= minimo && cantidad <= maximo;
+          case 'mayorMaximo':
+            return cantidad > maximo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filtro por fecha
+    if (filtroFecha !== 'todos') {
+      const hoy = new Date();
+      let inicio = null;
+      let fin = null;
+
+      if (filtroFecha === 'hoy') {
+        inicio = toStartOfDay(hoy);
+        fin = toEndOfDay(hoy);
+      } else if (filtroFecha === 'ultimos7') {
+        const hace7 = new Date();
+        hace7.setDate(hace7.getDate() - 6);
+        inicio = toStartOfDay(hace7);
+        fin = toEndOfDay(hoy);
+      } else if (filtroFecha === 'rango' && rangoFechaInicio && rangoFechaFin) {
+        inicio = toStartOfDay(new Date(rangoFechaInicio));
+        fin = toEndOfDay(new Date(rangoFechaFin));
+      }
+
+      if (inicio && fin) {
+        base = base.filter(item => item.fecha >= inicio && item.fecha <= fin);
+      }
+    }
+
+    setInventarioFiltrado(base);
+  }, [filtroActivo, inventario, busqueda, filtroEstado, filtroCantidad, filtroFecha, rangoFechaInicio, rangoFechaFin]);
 
   const getEstado = (cantidad, categoria, minimo, maximo) => {
     if (cantidad <= minimo) return 'critico';
@@ -138,6 +230,85 @@ const Dashboard = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Inventario</h1>
         <p className="text-gray-600">Vista general del estado actual del inventario</p>
+      </div>
+
+      {/* Búsqueda global */}
+      <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o categoría (global)"
+          className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={handleLimpiarFiltros}
+          className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+
+      {/* Filtros avanzados */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Estado</label>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="normal">Normal</option>
+            <option value="bajo">Bajo</option>
+            <option value="critico">Crítico</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Cantidad</label>
+          <select
+            value={filtroCantidad}
+            onChange={(e) => setFiltroCantidad(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="igualCero">Cantidad = 0</option>
+            <option value="menorMinimo">Cantidad menor al mínimo</option>
+            <option value="entreMinMax">Cantidad entre mínimo y máximo</option>
+            <option value="mayorMaximo">Cantidad mayor al máximo</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Fecha</label>
+          <select
+            value={filtroFecha}
+            onChange={(e) => setFiltroFecha(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="hoy">Hoy</option>
+            <option value="ultimos7">Últimos 7 días</option>
+            <option value="rango">Rango de fechas</option>
+          </select>
+          {filtroFecha === 'rango' && (
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={rangoFechaInicio}
+                onChange={(e) => setRangoFechaInicio(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="date"
+                value={rangoFechaFin}
+                onChange={(e) => setRangoFechaFin(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Botones de filtro */}

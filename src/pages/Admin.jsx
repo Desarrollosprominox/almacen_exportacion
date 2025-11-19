@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDataverseService } from '../services/dataverseService';
 import { Plus } from 'lucide-react';
 
@@ -13,30 +13,41 @@ import { Plus } from 'lucide-react';
  */
 function Admin() {
   const [productos, setProductos] = useState([]);
+  const [inventario, setInventario] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filtroActivo, setFiltroActivo] = useState('vinil');
   const [guardando, setGuardando] = useState(false);
   const [valoresEditados, setValoresEditados] = useState({});
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos'); // todos | normal | bajo | critico
+  const [filtroCantidad, setFiltroCantidad] = useState('todos'); // todos | igualCero | menorMinimo | entreMinMax | mayorMaximo
+  const [filtroFecha, setFiltroFecha] = useState('todos'); // todos | hoy | ultimos7 | rango
+  const [rangoFechaInicio, setRangoFechaInicio] = useState('');
+  const [rangoFechaFin, setRangoFechaFin] = useState('');
   const [nuevoProducto, setNuevoProducto] = useState({
     amv_producto: '',
     amv_categoria: 'Vinil',
     amv_minimo: 0,
     amv_maximo: 0
   });
-  const { getProductosIndirectos, updateProductoIndirecto, createProductoIndirecto } = useDataverseService();
+  const { getProductosIndirectos, updateProductoIndirecto, createProductoIndirecto, getInventarioIndirecto } = useDataverseService();
 
   useEffect(() => {
     const fetchProductos = async () => {
       try {
         setLoading(true);
-        const data = await getProductosIndirectos();
+        const [data, inventarioData] = await Promise.all([
+          getProductosIndirectos(),
+          getInventarioIndirecto()
+        ]);
         // Ordenar los productos alfabéticamente
         const productosOrdenados = [...data].sort((a, b) => 
           a.amv_producto.localeCompare(b.amv_producto)
         );
         setProductos(productosOrdenados);
+        setInventario(inventarioData || []);
       } catch (err) {
         setError('Error al cargar los productos');
         console.error(err);
@@ -47,6 +58,155 @@ function Admin() {
 
     fetchProductos();
   }, []);
+
+  const getEstado = (cantidad, minimo, maximo) => {
+    if (cantidad <= minimo) return 'critico';
+    if (cantidad <= (minimo + maximo) / 2) return 'bajo';
+    return 'normal';
+  };
+
+  const getEstadoColor = (estado) => {
+    switch (estado) {
+      case 'normal':
+        return 'bg-green-100 text-green-800';
+      case 'bajo':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'critico':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getEstadoText = (estado) => {
+    switch (estado) {
+      case 'normal':
+        return 'Normal';
+      case 'bajo':
+        return 'Bajo';
+      case 'critico':
+        return 'Crítico';
+      default:
+        return 'Desconocido';
+    }
+  };
+
+  const toStartOfDay = (date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const toEndOfDay = (date) => {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  };
+
+  const ultimoMovimientoPorProducto = useMemo(() => {
+    if (!inventario || inventario.length === 0) return {};
+    const ordenado = [...inventario].sort((a, b) => new Date(b.amv_fecha) - new Date(a.amv_fecha));
+    return ordenado.reduce((acc, curr) => {
+      const key = `${curr.amv_producto}-${curr.amv_categoria}`;
+      if (!acc[key]) {
+        acc[key] = curr;
+      }
+      return acc;
+    }, {});
+  }, [inventario]);
+
+  const productosEnriquecidos = useMemo(() => {
+    return productos.map(p => {
+      const key = `${p.amv_producto}-${p.amv_categoria}`;
+      const ultimo = ultimoMovimientoPorProducto[key];
+      const cantidad = ultimo ? Number(ultimo.amv_cantidad) : 0;
+      const fecha = ultimo ? new Date(ultimo.amv_fecha) : null;
+      const estado = getEstado(cantidad, Number(p.amv_minimo) || 0, Number(p.amv_maximo) || 0);
+      return {
+        ...p,
+        nombre: p.amv_producto,
+        categoria: p.amv_categoria,
+        minimo: Number(p.amv_minimo) || 0,
+        maximo: Number(p.amv_maximo) || 0,
+        valorActual: cantidad,
+        fecha,
+        ultimaActualizacion: fecha
+          ? fecha.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/Mexico_City' })
+          : 'N/D',
+        estado
+      };
+    });
+  }, [productos, ultimoMovimientoPorProducto]);
+
+  const handleLimpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroEstado('todos');
+    setFiltroCantidad('todos');
+    setFiltroFecha('todos');
+    setRangoFechaInicio('');
+    setRangoFechaFin('');
+  };
+
+  const productosFiltrados = useMemo(() => {
+    const query = busqueda.trim().toLowerCase();
+    let base = productosEnriquecidos;
+
+    if (query) {
+      base = base.filter(item =>
+        item.nombre.toLowerCase().includes(query) ||
+        item.categoria.toLowerCase().includes(query)
+      );
+    } else {
+      base = base.filter(item => item.categoria.toLowerCase() === filtroActivo);
+    }
+
+    if (filtroEstado !== 'todos') {
+      base = base.filter(item => item.estado === filtroEstado);
+    }
+
+    if (filtroCantidad !== 'todos') {
+      base = base.filter(item => {
+        const cantidad = Number(item.valorActual) || 0;
+        const minimo = Number(item.minimo) || 0;
+        const maximo = Number(item.maximo) || 0;
+        switch (filtroCantidad) {
+          case 'igualCero':
+            return cantidad === 0;
+          case 'menorMinimo':
+            return cantidad < minimo;
+          case 'entreMinMax':
+            return cantidad >= minimo && cantidad <= maximo;
+          case 'mayorMaximo':
+            return cantidad > maximo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    if (filtroFecha !== 'todos') {
+      const hoy = new Date();
+      let inicio = null;
+      let fin = null;
+      if (filtroFecha === 'hoy') {
+        inicio = toStartOfDay(hoy);
+        fin = toEndOfDay(hoy);
+      } else if (filtroFecha === 'ultimos7') {
+        const hace7 = new Date();
+        hace7.setDate(hace7.getDate() - 6);
+        inicio = toStartOfDay(hace7);
+        fin = toEndOfDay(hoy);
+      } else if (filtroFecha === 'rango' && rangoFechaInicio && rangoFechaFin) {
+        inicio = toStartOfDay(new Date(rangoFechaInicio));
+        fin = toEndOfDay(new Date(rangoFechaFin));
+      }
+      if (inicio && fin) {
+        base = base.filter(item => item.fecha && item.fecha >= inicio && item.fecha <= fin);
+      }
+    }
+
+    return base;
+  }, [productosEnriquecidos, busqueda, filtroActivo, filtroEstado, filtroCantidad, filtroFecha, rangoFechaInicio, rangoFechaFin]);
 
   const handleSave = async (productoId, values) => {
     try {
@@ -129,10 +289,6 @@ function Admin() {
       </div>
     );
   }
-
-  const productosFiltrados = productos.filter(
-    producto => producto.amv_categoria.toLowerCase() === filtroActivo
-  );
 
   return (
     <div className="p-6">
@@ -234,6 +390,85 @@ function Admin() {
         </div>
       )}
 
+      {/* Búsqueda y limpiar */}
+      <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <input
+          type="search"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o categoría (global)"
+          className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={handleLimpiarFiltros}
+          className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+
+      {/* Filtros avanzados */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Estado</label>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="normal">Normal</option>
+            <option value="bajo">Bajo</option>
+            <option value="critico">Crítico</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Cantidad</label>
+          <select
+            value={filtroCantidad}
+            onChange={(e) => setFiltroCantidad(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="igualCero">Cantidad = 0</option>
+            <option value="menorMinimo">Cantidad menor al mínimo</option>
+            <option value="entreMinMax">Cantidad entre mínimo y máximo</option>
+            <option value="mayorMaximo">Cantidad mayor al máximo</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600 mb-1">Fecha</label>
+          <select
+            value={filtroFecha}
+            onChange={(e) => setFiltroFecha(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="todos">Todos</option>
+            <option value="hoy">Hoy</option>
+            <option value="ultimos7">Últimos 7 días</option>
+            <option value="rango">Rango de fechas</option>
+          </select>
+          {filtroFecha === 'rango' && (
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={rangoFechaInicio}
+                onChange={(e) => setRangoFechaInicio(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="date"
+                value={rangoFechaFin}
+                onChange={(e) => setRangoFechaFin(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Botones de filtro */}
       <div className="mb-6 flex gap-4">
         <button
@@ -318,10 +553,19 @@ function Admin() {
                   Producto
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cantidad Actual
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Mínimo
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Máximo
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estatus
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Última Actualización
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
@@ -333,6 +577,9 @@ function Admin() {
                 <tr key={producto.amv_productosindirectosid} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{producto.amv_producto}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{producto.valorActual} pzas</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
@@ -369,6 +616,14 @@ function Admin() {
                       className="border rounded-md p-2 w-24"
                       disabled={guardando}
                     />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(producto.estado)}`}>
+                      {getEstadoText(producto.estado)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {producto.ultimaActualizacion}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {guardando ? (
