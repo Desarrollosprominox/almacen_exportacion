@@ -6,9 +6,6 @@ import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Historico from './pages/Historico';
-import Indicadores from './pages/Indicadores';
-import Admin from './pages/Admin';
 import { useState, useEffect } from 'react';
 
 // Componente de carga
@@ -94,36 +91,6 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <Dashboard />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/historico"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Historico />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/indicadores"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Indicadores />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Admin />
                 </MainLayout>
               </ProtectedRoute>
             }

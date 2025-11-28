@@ -728,7 +728,7 @@ export function useDataverseService() {
     }
   }, [getAccessToken]);
 
-  const getAuthHeader = async () => {
+  const getAuthHeader = useCallback(async () => {
     const account = accounts[0];
     const token = await instance.acquireTokenSilent({
       scopes: ['https://orgb392fb43.crm.dynamics.com/.default'],
@@ -740,7 +740,91 @@ export function useDataverseService() {
       'OData-MaxVersion': '4.0',
       'OData-Version': '4.0'
     };
-  };
+  }, [instance, accounts]);
+
+  const getInventarioRefacciones = useCallback(async () => {
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(
+        `${DATAVERSE_URL}/amv_inventarioderefaccioneses?$select=amv_concepto,amv_descripcion,amv_valoractual,amv_cantidadminima,amv_costounitario`,
+        { headers }
+      );
+
+      if (!response.ok) {
+        throw new Error('Error al obtener datos de inventario de refacciones');
+      }
+
+      const data = await response.json();
+      return data.value;
+    } catch (error) {
+      console.error('Error en getInventarioRefacciones:', error);
+      throw error;
+    }
+  }, [getAuthHeader]);
+
+  const getInventarioAlmacenCS = useCallback(async () => {
+    const headers = await getAuthHeader();
+
+    const entitySetCandidates = [
+      // más probable
+      `${DATAVERSE_URL}/cr9a1_inventariosalmacencs`,
+      // variantes comunes de pluralización en Dataverse
+      `${DATAVERSE_URL}/cr9a1_inventariosalmacencses`
+    ];
+
+    const select = '$select=cr9a1_idmovimiento,cr9a1_empaque,cr9a1_ubicacion,cr9a1_fechahora,cr9a1_piezasdec,cr9a1_piezas';
+    const order = '$orderby=cr9a1_fechahora desc';
+
+    const errors = [];
+
+    for (const baseUrl of entitySetCandidates) {
+      // 1) Intento con $select específico
+      let url = `${baseUrl}?${select}&${order}`;
+      try {
+        let response = await fetch(url, { headers });
+        if (response.ok) {
+          const data = await response.json();
+          return data.value;
+        } else {
+          const detail = await safeReadError(response);
+          errors.push(`[${response.status}] ${baseUrl} con select: ${detail}`);
+        }
+      } catch (e) {
+        errors.push(`Fetch error ${baseUrl} con select: ${e?.message || e}`);
+      }
+
+      // 2) Intento sin $select (por si hay nombre de columna distinto)
+      url = `${baseUrl}?${order}`;
+      try {
+        let response = await fetch(url, { headers });
+        if (response.ok) {
+          const data = await response.json();
+          return data.value;
+        } else {
+          const detail = await safeReadError(response);
+          errors.push(`[${response.status}] ${baseUrl} sin select: ${detail}`);
+        }
+      } catch (e) {
+        errors.push(`Fetch error ${baseUrl} sin select: ${e?.message || e}`);
+      }
+    }
+
+    throw new Error(`Error al obtener datos de inventarios almacén CS. Detalles: ${errors.join(' | ')}`);
+  }, [getAuthHeader]);
+
+  // Intento seguro de leer JSON o texto del error
+  async function safeReadError(response) {
+    try {
+      const data = await response.json();
+      return data?.error?.message || JSON.stringify(data);
+    } catch {
+      try {
+        return await response.text();
+      } catch {
+        return 'sin detalles';
+      }
+    }
+  }
 
   const getInventarioIndirecto = async () => {
     try {
@@ -857,6 +941,8 @@ export function useDataverseService() {
     getInventarioIndirecto,
     getProductosIndirectos,
     updateProductoIndirecto,
-    createProductoIndirecto
+    createProductoIndirecto,
+    getInventarioRefacciones,
+    getInventarioAlmacenCS
   };
 } 

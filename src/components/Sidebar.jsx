@@ -4,10 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { 
   Home,
   PanelLeftClose, 
-  PanelLeftOpen,
-  History,
-  BarChart2,
-  Settings
+  PanelLeftOpen
 } from 'lucide-react';
 
 function Sidebar({ onCollapse }) {
@@ -29,9 +26,6 @@ function Sidebar({ onCollapse }) {
 
   const menuItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { path: '/historico', icon: History, label: 'Histórico' },
-    { path: '/indicadores', icon: BarChart2, label: 'Indicadores' },
-    { path: '/admin', icon: Settings, label: 'Admin' }
   ];
 
   return (
