@@ -1,11 +1,14 @@
 import { LogLevel } from '@azure/msal-browser';
 
+const REDIRECT_URI = import.meta.env.VITE_AUTH_REDIRECT_URI || window.location.origin;
+const POST_LOGOUT_REDIRECT_URI = import.meta.env.VITE_AUTH_POST_LOGOUT_REDIRECT_URI || REDIRECT_URI;
+
 export const msalConfig = {
     auth: {
-        clientId: "2460b134-54bc-4a9f-9acd-c11df1511b3f",
+        clientId: "d3b2e185-4907-476f-b5bb-94504d706662",
         authority: "https://login.microsoftonline.com/dcbc0cef-7e0e-4841-9a93-633aa4c88bbf",
-        redirectUri: window.location.origin,
-        postLogoutRedirectUri: window.location.origin,
+        redirectUri: REDIRECT_URI,
+        postLogoutRedirectUri: POST_LOGOUT_REDIRECT_URI,
         navigateToLoginRequestUrl: true,
     },
     cache: {
