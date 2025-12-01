@@ -115,10 +115,9 @@ const Dashboard = () => {
           columns={[
             { key: 'cr9a1_idmovimiento', header: 'ID Movimiento' },
             { key: 'cr9a1_empaque', header: 'Empaque' },
+            { key: 'cr9a1_piezasdec', header: 'Piezas' },
             { key: 'cr9a1_ubicacion', header: 'Ubicación' },
-            { key: 'cr9a1_fechahora', header: 'Fecha y hora' },
-            { key: 'cr9a1_piezasdec', header: 'Piezas dec' },
-            { key: 'cr9a1_piezas', header: 'Piezas' }
+            { key: 'cr9a1_fechahora', header: 'Fecha y hora' }
           ]}
         />
       </div>
@@ -194,16 +193,13 @@ const Dashboard = () => {
                   Empaque
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Piezas
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ubicación
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha y hora
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Piezas dec
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Piezas
                 </th>
               </tr>
             </thead>
@@ -222,6 +218,11 @@ const Dashboard = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
+                      {item.cr9a1_piezasdec ?? '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
                       {item.cr9a1_ubicacion || '-'}
                     </div>
                   </td>
@@ -230,21 +231,11 @@ const Dashboard = () => {
                       {formatDateTime(item.cr9a1_fechahora)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {item.cr9a1_piezasdec ?? '-'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {item.cr9a1_piezas ?? '-'}
-                    </div>
-                  </td>
                 </tr>
               ))}
               {filteredMovimientos.length === 0 && (
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-500" colSpan="6">
+                  <td className="px-6 py-4 text-sm text-gray-500" colSpan="5">
                     Sin resultados.
                   </td>
                 </tr>
