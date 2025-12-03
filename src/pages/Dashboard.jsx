@@ -9,6 +9,7 @@ const Dashboard = () => {
     idmov: '',
     empaque: '',
     ubicacion: '',
+    equipo: '',
     startDate: '',
     endDate: ''
   });
@@ -60,6 +61,7 @@ const Dashboard = () => {
       if (filters.idmov && !normalize(m.cr9a1_idmovimiento).includes(normalize(filters.idmov))) return false;
       if (filters.empaque && !normalize(m.cr9a1_empaque).includes(normalize(filters.empaque))) return false;
       if (filters.ubicacion && !normalize(m.cr9a1_ubicacion).includes(normalize(filters.ubicacion))) return false;
+      if (filters.equipo && !normalize(m.cr9a1_equipo).includes(normalize(filters.equipo))) return false;
 
       // Fechas
       if (start || end) {
@@ -117,6 +119,7 @@ const Dashboard = () => {
             { key: 'cr9a1_empaque', header: 'Empaque' },
             { key: 'cr9a1_piezasdec', header: 'Piezas' },
             { key: 'cr9a1_ubicacion', header: 'Ubicación' },
+            { key: 'cr9a1_equipo', header: 'Equipo' },
             { key: 'cr9a1_fechahora', header: 'Fecha y hora' }
           ]}
         />
@@ -124,7 +127,7 @@ const Dashboard = () => {
 
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">ID Movimiento</label>
             <input
@@ -153,6 +156,17 @@ const Dashboard = () => {
               type="text"
               name="ubicacion"
               value={filters.ubicacion}
+              onChange={onChange}
+              placeholder="Buscar..."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Equipo</label>
+            <input
+              type="text"
+              name="equipo"
+              value={filters.equipo}
               onChange={onChange}
               placeholder="Buscar..."
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -199,6 +213,9 @@ const Dashboard = () => {
                   Ubicación
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Equipo
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha y hora
                 </th>
               </tr>
@@ -228,6 +245,11 @@ const Dashboard = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
+                      {item.cr9a1_equipo || '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
                       {formatDateTime(item.cr9a1_fechahora)}
                     </div>
                   </td>
@@ -235,7 +257,7 @@ const Dashboard = () => {
               ))}
               {filteredMovimientos.length === 0 && (
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-500" colSpan="5">
+                  <td className="px-6 py-4 text-sm text-gray-500" colSpan="6">
                     Sin resultados.
                   </td>
                 </tr>

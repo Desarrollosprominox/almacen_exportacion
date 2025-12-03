@@ -772,7 +772,7 @@ export function useDataverseService() {
       `${DATAVERSE_URL}/cr9a1_inventariosalmacencses`
     ];
 
-    const select = '$select=cr9a1_idmovimiento,cr9a1_empaque,cr9a1_ubicacion,cr9a1_fechahora,cr9a1_piezasdec,cr9a1_piezas';
+    const select = '$select=cr9a1_idmovimiento,cr9a1_empaque,cr9a1_ubicacion,cr9a1_fechahora,cr9a1_piezasdec,cr9a1_piezas,cr9a1_equipo';
     const order = '$orderby=cr9a1_fechahora desc';
 
     const errors = [];
